@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Oído de Piano — Práctica con micrófono</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Work+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   TOKENS — paleta inspirada en el instrumento: marfil, ébano,
+   madera de nogal, latón de los pedales, fieltro rojo interior
+   ============================================================ */
+:root{
+  --wood-dark:#241811;
+  --wood-panel:#3a2a1c;
+  --wood-panel-2:#30231664;
+  --wood-line:#4d3a27;
+  --ivory:#f2ead8;
+  --ivory-dim:#c9bba0;
+  --ivory-faint:#8d7c62;
+  --brass:#c19a5b;
+  --brass-bright:#e6c584;
+  --felt-green:#5c8262;
+  --felt-green-bright:#7fae86;
+  --felt-red:#b0554a;
+  --ebony:#14100c;
+  --shadow:0 12px 30px -10px rgba(0,0,0,0.55);
+  --radius:14px;
+  --radius-sm:8px;
+  --ease:cubic-bezier(.2,.7,.3,1);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  background:
+    radial-gradient(ellipse 900px 500px at 50% -10%, #3a2a1c 0%, transparent 60%),
+    var(--wood-dark);
+  color:var(--ivory);
+  font-family:'Work Sans',system-ui,sans-serif;
+  min-height:100vh;
+  padding-bottom:60px;
+}
+@media (prefers-reduced-motion: reduce){
+  *{animation-duration:0.01ms !important; transition-duration:0.01ms !important;}
+}
+
+::selection{background:var(--brass); color:var(--ebony);}
+
+/* ===== estructura general ===== */
+.wrap{max-width:960px; margin:0 auto; padding:0 20px;}
+
+/* ===== header ===== */
+header{
+  padding:26px 20px 18px;
+  display:flex; align-items:center; justify-content:space-between; gap:14px;
+  flex-wrap:wrap;
+  border-bottom:1px solid var(--wood-line);
+}
+.brand{display:flex; align-items:center; gap:12px;}
+.brand .mark{
+  width:42px; height:42px; border-radius:10px;
+  background:linear-gradient(160deg, var(--ebony), #241b12);
+  border:1px solid var(--wood-line);
+  display:flex; align-items:center; justify-content:center;
+  position:relative; overflow:hidden;
+}
+.brand .mark::before{
+  content:''; position:absolute; inset:6px 6px auto 6px; height:16px;
+  background:repeating-linear-gradient(90deg, var(--ivory) 0 4px, var(--ebony) 4px 6px);
+  border-radius:2px;
+}
+.brand h1{
+  font-family:'Fraunces', serif; font-weight:600; font-size:22px; letter-spacing:0.01em;
+}
+.brand .sub{font-size:12px; color:var(--ivory-faint); margin-top:1px;}
+.streak{
+  display:flex; align-items:center; gap:8px;
+  background:var(--wood-panel-2); border:1px solid var(--wood-line);
+  padding:7px 14px; border-radius:30px; font-size:13px; color:var(--ivory-dim);
+}
+.streak b{color:var(--brass-bright); font-family:'JetBrains Mono', monospace;}
+
+/* ============================================================
+   HERO — afinador en vivo (elemento firma: aguja de latón sobre
+   un dial semicircular, como un afinador analógico real)
+   ============================================================ */
+.hero{padding:38px 20px 10px; text-align:center;}
+.hero .kicker{
+  font-size:12px; letter-spacing:0.14em; text-transform:uppercase;
+  color:var(--ivory-faint); margin-bottom:10px;
+}
+.hero h2{font-family:'Fraunces', serif; font-weight:500; font-size:28px; margin-bottom:6px;}
+.hero p.desc{color:var(--ivory-dim); font-size:14px; max-width:480px; margin:0 auto 26px;}
+
+.tuner{
+  width:340px; max-width:100%; margin:0 auto;
+  background:linear-gradient(180deg, #352617, #2a1e12);
+  border:1px solid var(--wood-line);
+  border-radius:18px;
+  padding:26px 20px 20px;
+  box-shadow:var(--shadow), inset 0 1px 0 rgba(255,255,255,0.03);
+  position:relative;
+}
+
+.gauge{
+  width:280px; height:150px; margin:0 auto; position:relative;
+}
+.gauge svg{width:100%; height:100%; display:block;}
+.gauge .needle{
+  transform-origin:140px 140px;
+  transition:transform 0.12s var(--ease);
+}
+.gauge .center-note{
+  position:absolute; left:50%; top:64%; transform:translate(-50%,-50%);
+  text-align:center;
+}
+.gauge .note-letter{
+  font-family:'Fraunces', serif; font-weight:600; font-size:44px; line-height:1;
+  color:var(--ivory);
+}
+.gauge .note-letter.in-tune{color:var(--felt-green-bright);}
+.gauge .octave-tag{
+  font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--brass-bright);
+  vertical-align:super;
+}
+
+.tuner-readout{
+  display:flex; justify-content:center; gap:22px; margin-top:6px;
+  font-family:'JetBrains Mono', monospace; font-size:13px; color:var(--ivory-faint);
+}
+.tuner-readout .cents.ok{color:var(--felt-green-bright);}
+.tuner-readout .cents.off{color:var(--felt-red);}
+
+.mic-control{margin-top:20px; display:flex; flex-direction:column; align-items:center; gap:10px;}
+.btn-mic{
+  display:flex; align-items:center; gap:8px;
+  background:var(--brass); color:var(--ebony); border:none;
+  padding:11px 24px; border-radius:30px; font-weight:700; font-size:14px;
+  cursor:pointer; transition:transform 0.15s var(--ease), background 0.15s;
+}
+.btn-mic:hover{background:var(--brass-bright); transform:translateY(-1px);}
+.btn-mic.listening{background:var(--felt-green); color:var(--ivory);}
+.btn-mic.listening:hover{background:var(--felt-green-bright);}
+.mic-status{font-size:12px; color:var(--ivory-faint); min-height:16px;}
+.mic-status.error{color:var(--felt-red);}
+
+/* pulso sutil cuando escucha */
+@keyframes pulse-ring{
+  0%{box-shadow:0 0 0 0 rgba(124,174,134,0.35);}
+  100%{box-shadow:0 0 0 14px rgba(124,174,134,0);}
+}
+.btn-mic.listening{animation:pulse-ring 1.8s infinite;}
+
+/* ============================================================
+   LECCIONES
+   ============================================================ */
+.section-title{
+  font-family:'Fraunces', serif; font-weight:500; font-size:19px;
+  margin:44px 0 4px; padding:0 20px;
+}
+.section-sub{font-size:13px; color:var(--ivory-faint); margin:0 0 16px; padding:0 20px;}
+
+.lesson-grid{
+  display:grid; grid-template-columns:repeat(auto-fit, minmax(190px,1fr));
+  gap:12px; padding:0 20px;
+}
+.lesson-card{
+  background:var(--wood-panel); border:1px solid var(--wood-line);
+  border-radius:var(--radius); padding:16px 16px 14px; cursor:pointer;
+  transition:all 0.2s var(--ease); text-align:left;
+}
+.lesson-card:hover{border-color:var(--brass); transform:translateY(-2px); box-shadow:var(--shadow);}
+.lesson-card.active{border-color:var(--brass); background:#40301e;}
+.lesson-card .lname{font-weight:600; font-size:15px; margin-bottom:3px;}
+.lesson-card .lmeta{font-size:12px; color:var(--ivory-faint);}
+.lesson-card .ring{
+  width:30px; height:30px; border-radius:50%;
+  border:2px solid var(--wood-line);
+  display:flex; align-items:center; justify-content:center;
+  font-family:'JetBrains Mono', monospace; font-size:10px; color:var(--ivory-dim);
+  margin-top:10px;
+}
+.lesson-card .ring.done{border-color:var(--felt-green-bright); color:var(--felt-green-bright);}
+
+/* ===== panel de lección activa ===== */
+.practice{
+  margin:20px 20px 0; background:var(--wood-panel); border:1px solid var(--wood-line);
+  border-radius:var(--radius); padding:22px; display:none;
+}
+.practice.open{display:block;}
+.practice-head{display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:8px; margin-bottom:16px;}
+.practice-head h3{font-family:'Fraunces', serif; font-size:19px; font-weight:600;}
+.practice-head .progress-txt{font-family:'JetBrains Mono', monospace; font-size:13px; color:var(--brass-bright);}
+
+.note-track{
+  display:flex; gap:6px; flex-wrap:wrap; margin-bottom:22px;
+}
+.note-dot{
+  width:34px; height:34px; border-radius:8px;
+  border:1px solid var(--wood-line); background:var(--wood-panel-2);
+  display:flex; align-items:center; justify-content:center;
+  font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--ivory-faint);
+  transition:all 0.2s var(--ease);
+}
+.note-dot.current{border-color:var(--brass); background:#4a381f; color:var(--brass-bright); transform:scale(1.08);}
+.note-dot.done{border-color:var(--felt-green); background:#2e4032; color:var(--felt-green-bright);}
+
+.feedback-line{
+  min-height:44px; display:flex; align-items:center; gap:10px;
+  font-size:14px; color:var(--ivory-dim); margin-bottom:16px;
+}
+.feedback-line .big-target{
+  font-family:'Fraunces', serif; font-size:26px; color:var(--ivory); font-weight:600;
+}
+
+/* teclado de referencia (visual, no clickeable) */
+.keyboard-ref{
+  display:flex; position:relative; height:80px; margin-bottom:6px;
+  background:var(--ebony); border-radius:8px; padding:6px; gap:1px;
+}
+.wkey{
+  flex:1; background:var(--ivory); border-radius:0 0 4px 4px; position:relative;
+  border:1px solid #d8cba9; min-width:18px;
+  transition:background 0.15s;
+}
+.wkey.target{background:var(--brass-bright);}
+.wkey.detected{outline:2px solid var(--felt-green-bright); outline-offset:-2px;}
+.bkey{
+  position:absolute; top:0; width:5.5%; height:60%; background:var(--ebony);
+  border:1px solid #000; border-radius:0 0 3px 3px; z-index:2;
+  transition:background 0.15s;
+}
+.bkey.target{background:var(--brass);}
+.bkey.detected{outline:2px solid var(--felt-green-bright); outline-offset:-1px;}
+
+.practice-actions{display:flex; gap:10px; margin-top:16px; flex-wrap:wrap;}
+.btn-ghost{
+  background:transparent; border:1px solid var(--wood-line); color:var(--ivory-dim);
+  padding:8px 16px; border-radius:30px; font-size:13px; cursor:pointer; transition:all 0.15s;
+}
+.btn-ghost:hover{border-color:var(--brass); color:var(--ivory);}
+
+.done-banner{
+  display:none; text-align:center; padding:20px; background:#2e4032;
+  border:1px solid var(--felt-green); border-radius:var(--radius-sm); margin-top:10px;
+  font-size:14px;
+}
+.done-banner.show{display:block;}
+.done-banner b{color:var(--felt-green-bright); font-family:'Fraunces', serif; font-size:17px;}
+
+/* ============================================================
+   AJUSTES
+   ============================================================ */
+.settings{
+  margin:26px 20px 0; padding:18px 20px; background:var(--wood-panel-2);
+  border:1px solid var(--wood-line); border-radius:var(--radius);
+  display:flex; gap:22px; flex-wrap:wrap; align-items:center;
+}
+.settings label{font-size:12px; color:var(--ivory-faint); display:block; margin-bottom:4px;}
+.settings .field{display:flex; flex-direction:column;}
+.settings input, .settings select{
+  background:var(--wood-dark); border:1px solid var(--wood-line); color:var(--ivory);
+  padding:7px 10px; border-radius:var(--radius-sm); font-size:13px; font-family:'JetBrains Mono', monospace;
+  min-width:90px;
+}
+.settings .field.wide select{min-width:200px; font-family:'Work Sans',sans-serif;}
+
+footer{text-align:center; margin-top:50px; padding:0 20px; font-size:12px; color:var(--ivory-faint);}
+
+@media (max-width:600px){
+  .hero h2{font-size:23px;}
+  .tuner{padding:20px 12px 16px;}
+  .lesson-grid{grid-template-columns:1fr 1fr;}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="mark"></div>
+    <div>
+      <h1>Oído de Piano</h1>
+      <div class="sub">Práctica guiada con micrófono</div>
+    </div>
+  </div>
+  <div class="streak">🔥 Racha: <b id="streakCount">0</b> días</div>
+</header>
+
+<!-- ============ HERO: AFINADOR EN VIVO ============ -->
+<section class="hero wrap">
+  <div class="kicker">Afinador en vivo</div>
+  <h2>Escuchando tu piano</h2>
+  <p class="desc">Activá el micrófono y tocá cualquier nota en tu piano acústico. El dial te muestra qué nota detecta y qué tan afinada está.</p>
+
+  <div class="tuner">
+    <div class="gauge">
+      <svg viewBox="0 0 280 150">
+        <!-- arco de fondo -->
+        <path d="M 20 140 A 120 120 0 0 1 260 140" fill="none" stroke="#4d3a27" stroke-width="10" stroke-linecap="round"/>
+        <!-- zona verde central (afinado) -->
+        <path d="M 118 24.5 A 120 120 0 0 1 162 24.5" fill="none" stroke="#5c8262" stroke-width="10" stroke-linecap="round" opacity="0.85"/>
+        <!-- marcas -->
+        <g stroke="#8d7c62" stroke-width="2">
+          <line x1="20" y1="140" x2="30" y2="132"/>
+          <line x1="140" y1="20" x2="140" y2="32"/>
+          <line x1="260" y1="140" x2="250" y2="132"/>
+        </g>
+        <text x="20" y="128" fill="#8d7c62" font-size="10" font-family="JetBrains Mono, monospace">−50¢</text>
+        <text x="128" y="14" fill="#c19a5b" font-size="10" font-family="JetBrains Mono, monospace">0</text>
+        <text x="228" y="128" fill="#8d7c62" font-size="10" font-family="JetBrains Mono, monospace">+50¢</text>
+        <!-- aguja -->
+        <g class="needle" id="needle">
+          <line x1="140" y1="140" x2="140" y2="34" stroke="#e6c584" stroke-width="3" stroke-linecap="round"/>
+          <circle cx="140" cy="140" r="6" fill="#e6c584"/>
+        </g>
+      </svg>
+      <div class="center-note">
+        <div class="note-letter" id="noteLetter">—</div>
+      </div>
+    </div>
+    <div class="tuner-readout">
+      <span id="freqReadout">— Hz</span>
+      <span class="cents" id="centsReadout">— ¢</span>
+    </div>
+
+    <div class="mic-control">
+      <button class="btn-mic" id="btnMic">🎙️ Activar micrófono</button>
+      <div class="mic-status" id="micStatus">El audio se procesa en tu navegador, nunca se envía a ningún servidor.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ LECCIONES ============ -->
+<h3 class="section-title">Lecciones</h3>
+<p class="section-sub">Elegí una y tocá cada nota en tu piano cuando se resalte. El micrófono confirma cuándo pasar a la siguiente.</p>
+<div class="lesson-grid" id="lessonGrid"></div>
+
+<div class="practice" id="practicePanel">
+  <div class="practice-head">
+    <h3 id="practiceTitle">—</h3>
+    <span class="progress-txt" id="practiceProgress">0 / 0</span>
+  </div>
+
+  <div class="note-track" id="noteTrack"></div>
+
+  <div class="keyboard-ref" id="keyboardRef"></div>
+
+  <div class="feedback-line" id="feedbackLine">
+    Tocá: <span class="big-target" id="bigTarget">—</span>
+  </div>
+
+  <div class="done-banner" id="doneBanner">
+    <b>¡Lección completa! 🎉</b><br>
+    Muy bien — probá la siguiente o repetí esta para afianzarla.
+  </div>
+
+  <div class="practice-actions">
+    <button class="btn-ghost" id="btnRestartLesson">↺ Reiniciar lección</button>
+    <button class="btn-ghost" id="btnCloseLesson">Cerrar</button>
+  </div>
+</div>
+
+<!-- ============ AJUSTES ============ -->
+<div class="settings wrap">
+  <div class="field">
+    <label>Calibración A4 (Hz)</label>
+    <input type="number" id="a4Input" value="440" min="415" max="466">
+  </div>
+  <div class="field">
+    <label>Sensibilidad</label>
+    <select id="sensSelect">
+      <option value="0.01">Alta (piano suave)</option>
+      <option value="0.02" selected>Media</option>
+      <option value="0.04">Baja (ambiente ruidoso)</option>
+    </select>
+  </div>
+  <div class="field wide">
+    <label>Entrada de micrófono</label>
+    <select id="micSelect"><option value="">Predeterminado del sistema</option></select>
+  </div>
+</div>
+
+<footer>Oído de Piano · práctica local, sin cuentas ni datos guardados fuera de tu navegador</footer>
+
+<script>
+/* ============================================================
+   DATOS: notas y lecciones
+   Las melodías son de dominio público (folclore / Beethoven);
+   están codificadas como nota+octava, no como partitura de nadie.
+   ============================================================ */
+const NOMBRES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const ES_NEGRA = [false,true,false,true,false,false,true,false,true,false,true,false];
+
+function escala(desde, hasta){
+  const out=[]; for(let m=desde;m<=hasta;m++) out.push(midiToNote(m).full);
+  return out;
+}
+function midiToNote(midi){
+  const nombre = NOMBRES[midi % 12];
+  const octava = Math.floor(midi/12) - 1;
+  return { pc: nombre, octava, full: nombre+octava, midi };
+}
+function noteToMidi(pc, octava){
+  return NOMBRES.indexOf(pc) + (octava+1)*12;
+}
+
+const LECCIONES = [
+  {
+    id:'escala',
+    nombre:'Escala de Do mayor',
+    meta:'8 notas · C4 a C5',
+    notas:['C4','D4','E4','F4','G4','A4','B4','C5']
+  },
+  {
+    id:'estrellita',
+    nombre:'Estrellita (Twinkle Twinkle)',
+    meta:'melodía tradicional',
+    notas:['C4','C4','G4','G4','A4','A4','G4','F4','F4','E4','E4','D4','D4','C4']
+  },
+  {
+    id:'himno',
+    nombre:'Himno a la Alegría',
+    meta:'Beethoven — fragmento inicial',
+    notas:['E4','E4','F4','G4','G4','F4','E4','D4','C4','C4','D4','E4','E4','D4','D4']
+  },
+  {
+    id:'elisa',
+    nombre:'Para Elisa',
+    meta:'Beethoven — motivo inicial',
+    notas:['E5','D#5','E5','D#5','E5','B4','D5','C5','A4']
+  }
+];
+
+/* ============================================================
+   ESTADO
+   ============================================================ */
+const state = {
+  listening:false,
+  audioCtx:null, analyser:null, mic:null, dataArray:null, raf:null,
+  a4:440,
+  sensitivity:0.02,
+  currentLesson:null,
+  lessonIndex:0,
+  lessonDone:{},          // {leccionId: true}
+  holdFrames:0,
+  requiredHold:18,        // ~0.3s a 60fps sosteniendo la nota correcta
+  lastNoteHeard:null,
+};
+
+const STORAGE_KEY = 'oido_piano_v1';
+
+function cargarProgreso(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const data = raw ? JSON.parse(raw) : {};
+    state.lessonDone = data.lessonDone || {};
+    actualizarRacha(data.lastVisit);
+  }catch(e){ state.lessonDone = {}; }
+}
+function actualizarRacha(lastVisit){
+  const hoy = new Date().toISOString().slice(0,10);
+  let racha = 0;
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const data = raw ? JSON.parse(raw) : {};
+    racha = data.streak || 0;
+    if(data.lastVisit === hoy){
+      // ya contado hoy
+    } else if(isAyer(data.lastVisit, hoy)){
+      racha += 1;
+    } else if(data.lastVisit){
+      racha = 1;
+    } else {
+      racha = 1;
+    }
+  }catch(e){ racha = 1; }
+  guardarProgreso({streak:racha, lastVisit:hoy});
+  document.getElementById('streakCount').textContent = racha;
+}
+function isAyer(fechaStr, hoyStr){
+  if(!fechaStr) return false;
+  const d1 = new Date(fechaStr), d2 = new Date(hoyStr);
+  return Math.round((d2-d1)/86400000) === 1;
+}
+function guardarProgreso(extra){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const data = raw ? JSON.parse(raw) : {};
+    Object.assign(data, {lessonDone: state.lessonDone}, extra||{});
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }catch(e){}
+}
+
+/* ============================================================
+   DETECCIÓN DE TONO (autocorrelación)
+   ============================================================ */
+function autocorrelate(buffer, sampleRate){
+  const SIZE = buffer.length;
+  let rms = 0;
+  for(let i=0;i<SIZE;i++) rms += buffer[i]*buffer[i];
+  rms = Math.sqrt(rms/SIZE);
+  if(rms < state.sensitivity) return -1; // demasiado silencioso
+
+  let r1=0, r2=SIZE-1;
+  const thres = 0.2;
+  for(let i=0;i<SIZE/2;i++){ if(Math.abs(buffer[i])<thres){ r1=i; break; } }
+  for(let i=1;i<SIZE/2;i++){ if(Math.abs(buffer[SIZE-i])<thres){ r2=SIZE-i; break; } }
+
+  const trimmed = buffer.slice(r1, r2);
+  const n = trimmed.length;
+  const c = new Array(n).fill(0);
+  for(let lag=0; lag<n; lag++){
+    for(let i=0; i<n-lag; i++){ c[lag] += trimmed[i]*trimmed[i+lag]; }
+  }
+  let d=0; while(c[d] > c[d+1]) d++;
+  let maxVal=-1, maxPos=-1;
+  for(let i=d;i<n;i++){
+    if(c[i] > maxVal){ maxVal=c[i]; maxPos=i; }
+  }
+  let T0 = maxPos;
+  if(T0<=0) return -1;
+  // interpolación parabólica para mayor precisión
+  const x1=c[T0-1]||c[T0], x2=c[T0], x3=c[T0+1]||c[T0];
+  const a=(x1+x3-2*x2)/2, b=(x3-x1)/2;
+  if(a) T0 = T0 - b/(2*a);
+  return sampleRate/T0;
+}
+
+function freqToNoteInfo(freq){
+  if(freq<=0) return null;
+  const midiFloat = 12*(Math.log(freq/state.a4)/Math.log(2)) + 69;
+  const midi = Math.round(midiFloat);
+  const cents = Math.round((midiFloat-midi)*100);
+  const info = midiToNote(midi);
+  return {...info, freq, cents};
+}
+
+/* ============================================================
+   AUDIO: iniciar / detener micrófono
+   ============================================================ */
+async function toggleMic(){
+  if(state.listening){ pararMic(); return; }
+  const btn = document.getElementById('btnMic');
+  const status = document.getElementById('micStatus');
+  try{
+    const deviceId = document.getElementById('micSelect').value;
+    const constraints = { audio: deviceId ? {deviceId:{exact:deviceId}} : true };
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+    state.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    state.analyser = state.audioCtx.createAnalyser();
+    state.analyser.fftSize = 2048;
+    state.mic = state.audioCtx.createMediaStreamSource(stream);
+    state.mic.connect(state.analyser);
+    state.dataArray = new Float32Array(state.analyser.fftSize);
+    state.listening = true;
+    btn.textContent = '⏸️ Detener micrófono';
+    btn.classList.add('listening');
+    status.textContent = 'Escuchando... tocá una nota en tu piano.';
+    status.classList.remove('error');
+    listarMicrofonos();
+    loopEscucha();
+  }catch(e){
+    status.textContent = 'No se pudo acceder al micrófono. Revisá los permisos del navegador.';
+    status.classList.add('error');
+  }
+}
+function pararMic(){
+  state.listening = false;
+  if(state.raf) cancelAnimationFrame(state.raf);
+  if(state.audioCtx) state.audioCtx.close();
+  const btn = document.getElementById('btnMic');
+  btn.textContent = '🎙️ Activar micrófono';
+  btn.classList.remove('listening');
+  document.getElementById('micStatus').textContent = 'Micrófono detenido.';
+}
+async function listarMicrofonos(){
+  try{
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const sel = document.getElementById('micSelect');
+    const actuales = new Set([...sel.options].map(o=>o.value));
+    devices.filter(d=>d.kind==='audioinput').forEach(d=>{
+      if(!actuales.has(d.deviceId)){
+        const opt = document.createElement('option');
+        opt.value = d.deviceId;
+        opt.textContent = d.label || 'Micrófono';
+        sel.appendChild(opt);
+      }
+    });
+  }catch(e){}
+}
+
+function loopEscucha(){
+  if(!state.listening) return;
+  state.analyser.getFloatTimeDomainData(state.dataArray);
+  const freq = autocorrelate(state.dataArray, state.audioCtx.sampleRate);
+  if(freq > 0){
+    const info = freqToNoteInfo(freq);
+    actualizarAfinador(info);
+    if(state.currentLesson) evaluarLeccion(info);
+  }
+  state.raf = requestAnimationFrame(loopEscucha);
+}
+
+/* ============================================================
+   UI: AFINADOR
+   ============================================================ */
+function actualizarAfinador(info){
+  const letterEl = document.getElementById('noteLetter');
+  const freqEl = document.getElementById('freqReadout');
+  const centsEl = document.getElementById('centsReadout');
+  const needle = document.getElementById('needle');
+
+  letterEl.innerHTML = info.pc + '<span class="octave-tag">'+info.octava+'</span>';
+  freqEl.textContent = info.freq.toFixed(1)+' Hz';
+  const centsTxt = (info.cents>0?'+':'')+info.cents+' ¢';
+  centsEl.textContent = centsTxt;
+
+  const enAfinacion = Math.abs(info.cents) <= 8;
+  letterEl.classList.toggle('in-tune', enAfinacion);
+  centsEl.classList.toggle('ok', enAfinacion);
+  centsEl.classList.toggle('off', !enAfinacion);
+
+  const clamped = Math.max(-50, Math.min(50, info.cents));
+  const deg = clamped * 0.9; // -45deg a +45deg
+  needle.style.transform = `rotate(${deg}deg)`;
+}
+
+/* ============================================================
+   LECCIONES: render y lógica
+   ============================================================ */
+function renderLecciones(){
+  const grid = document.getElementById('lessonGrid');
+  grid.innerHTML = '';
+  LECCIONES.forEach(l=>{
+    const card = document.createElement('div');
+    card.className = 'lesson-card';
+    const hecha = !!state.lessonDone[l.id];
+    card.innerHTML = `
+      <div class="lname">${l.nombre}</div>
+      <div class="lmeta">${l.meta}</div>
+      <div class="ring ${hecha?'done':''}">${hecha?'✓':l.notas.length}</div>
+    `;
+    card.addEventListener('click', ()=> abrirLeccion(l.id));
+    grid.appendChild(card);
+  });
+}
+
+function abrirLeccion(id){
+  const leccion = LECCIONES.find(l=>l.id===id);
+  if(!leccion) return;
+  state.currentLesson = leccion;
+  state.lessonIndex = 0;
+  state.holdFrames = 0;
+
+  document.getElementById('practicePanel').classList.add('open');
+  document.getElementById('practiceTitle').textContent = leccion.nombre;
+  document.getElementById('doneBanner').classList.remove('show');
+  renderNoteTrack();
+  renderKeyboardRef();
+  actualizarObjetivo();
+
+  document.querySelectorAll('.lesson-card').forEach(c=>c.classList.remove('active'));
+  [...document.querySelectorAll('.lesson-card')].find(c=>c.querySelector('.lname').textContent===leccion.nombre)
+    ?.classList.add('active');
+
+  document.getElementById('practicePanel').scrollIntoView({behavior:'smooth', block:'nearest'});
+
+  if(!state.listening){
+    document.getElementById('feedbackLine').innerHTML =
+      'Activá el micrófono arriba para que la lección avance sola. Tocá: <span class="big-target" id="bigTarget">'+leccion.notas[0]+'</span>';
+  }
+}
+
+function renderNoteTrack(){
+  const track = document.getElementById('noteTrack');
+  track.innerHTML = '';
+  state.currentLesson.notas.forEach((n,i)=>{
+    const dot = document.createElement('div');
+    dot.className = 'note-dot' + (i===state.lessonIndex?' current':'') + (i<state.lessonIndex?' done':'');
+    dot.textContent = n.replace(/[0-9]/g,'');
+    track.appendChild(dot);
+  });
+  document.getElementById('practiceProgress').textContent =
+    `${state.lessonIndex} / ${state.currentLesson.notas.length}`;
+}
+
+function renderKeyboardRef(){
+  // dos octavas de referencia, C3 a B4, para tener margen visual
+  const ref = document.getElementById('keyboardRef');
+  ref.innerHTML = '';
+  const blancas = [];
+  for(let m=noteToMidi('C',3); m<=noteToMidi('B',5); m++){
+    if(!ES_NEGRA[m%12]) blancas.push(m);
+  }
+  blancas.forEach(m=>{
+    const k = document.createElement('div');
+    k.className='wkey';
+    k.dataset.midi = m;
+    ref.appendChild(k);
+  });
+  const anchoBlanca = 100/blancas.length;
+  let idxBlanca=0;
+  for(let m=noteToMidi('C',3); m<=noteToMidi('B',5); m++){
+    if(!ES_NEGRA[m%12]){ idxBlanca++; continue; }
+    const k = document.createElement('div');
+    k.className='bkey';
+    k.dataset.midi = m;
+    k.style.left = (idxBlanca*anchoBlanca - anchoBlanca*0.3)+'%';
+    ref.appendChild(k);
+  }
+}
+
+function actualizarObjetivo(){
+  const leccion = state.currentLesson;
+  const notaObjetivo = leccion.notas[state.lessonIndex];
+  const target = document.getElementById('bigTarget');
+  if(target) target.textContent = notaObjetivo;
+
+  document.querySelectorAll('.wkey,.bkey').forEach(k=>k.classList.remove('target','detected'));
+  const midiObjetivo = notaLetraOctavaAMidi(notaObjetivo);
+  const keyEl = document.querySelector(`[data-midi="${midiObjetivo}"]`);
+  if(keyEl) keyEl.classList.add('target');
+}
+function notaLetraOctavaAMidi(full){
+  const m = /^([A-G]#?)(\d)$/.exec(full);
+  return noteToMidi(m[1], parseInt(m[2]));
+}
+
+function evaluarLeccion(info){
+  const leccion = state.currentLesson;
+  if(!leccion) return;
+  const notaObjetivo = leccion.notas[state.lessonIndex];
+  const pcObjetivo = notaObjetivo.replace(/\d/g,'');
+
+  // marcar tecla detectada (referencia visual)
+  document.querySelectorAll('.wkey,.bkey').forEach(k=>k.classList.remove('detected'));
+  const midiDetectado = noteToMidi(info.pc, info.octava);
+  const keyDet = document.querySelector(`[data-midi="${midiDetectado}"]`);
+  if(keyDet) keyDet.classList.add('detected');
+
+  if(info.pc === pcObjetivo){
+    state.holdFrames++;
+    if(state.holdFrames >= state.requiredHold){
+      avanzarLeccion();
+    }
+  } else {
+    state.holdFrames = 0;
+  }
+}
+
+function avanzarLeccion(){
+  const leccion = state.currentLesson;
+  state.holdFrames = 0;
+  state.lessonIndex++;
+  if(state.lessonIndex >= leccion.notas.length){
+    completarLeccion();
+    return;
+  }
+  renderNoteTrack();
+  actualizarObjetivo();
+  destelloExito();
+}
+function destelloExito(){
+  const fb = document.getElementById('feedbackLine');
+  fb.style.color = 'var(--felt-green-bright)';
+  setTimeout(()=>{ fb.style.color=''; }, 350);
+}
+function completarLeccion(){
+  state.lessonDone[state.currentLesson.id] = true;
+  guardarProgreso();
+  renderNoteTrack();
+  document.getElementById('doneBanner').classList.add('show');
+  renderLecciones();
+  document.querySelectorAll('.lesson-card').forEach(c=>{
+    if(c.querySelector('.lname').textContent===state.currentLesson.nombre) c.classList.add('active');
+  });
+}
+
+function reiniciarLeccion(){
+  if(!state.currentLesson) return;
+  state.lessonIndex = 0;
+  state.holdFrames = 0;
+  document.getElementById('doneBanner').classList.remove('show');
+  renderNoteTrack();
+  actualizarObjetivo();
+}
+function cerrarLeccion(){
+  state.currentLesson = null;
+  document.getElementById('practicePanel').classList.remove('open');
+  document.querySelectorAll('.lesson-card').forEach(c=>c.classList.remove('active'));
+}
+
+/* ============================================================
+   EVENTOS Y ARRANQUE
+   ============================================================ */
+document.getElementById('btnMic').addEventListener('click', toggleMic);
+document.getElementById('btnRestartLesson').addEventListener('click', reiniciarLeccion);
+document.getElementById('btnCloseLesson').addEventListener('click', cerrarLeccion);
+document.getElementById('a4Input').addEventListener('change', e=>{
+  const v = parseFloat(e.target.value);
+  if(v>=415 && v<=466) state.a4 = v;
+});
+document.getElementById('sensSelect').addEventListener('change', e=>{
+  state.sensitivity = parseFloat(e.target.value);
+});
+
+cargarProgreso();
+renderLecciones();
+</script>
+</body>
+</html>
