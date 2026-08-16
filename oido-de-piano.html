@@ -161,13 +161,53 @@ header{
 .btn-mic.listening{animation:pulse-ring 1.8s infinite;}
 
 /* ============================================================
-   LECCIONES
+   PLAN DE 30 DÍAS
    ============================================================ */
 .section-title{
   font-family:'Fraunces', serif; font-weight:500; font-size:19px;
   margin:44px 0 4px; padding:0 20px;
 }
 .section-sub{font-size:13px; color:var(--ivory-faint); margin:0 0 16px; padding:0 20px;}
+
+.plan-progress-wrap{padding:0 20px; margin-bottom:16px;}
+.plan-progress-bar{
+  height:8px; border-radius:20px; background:var(--wood-panel-2);
+  border:1px solid var(--wood-line); overflow:hidden;
+}
+.plan-progress-fill{
+  height:100%; background:linear-gradient(90deg, var(--brass), var(--brass-bright));
+  transition:width 0.4s var(--ease);
+}
+.plan-progress-txt{font-size:12px; color:var(--ivory-faint); margin-top:6px; font-family:'JetBrains Mono', monospace;}
+
+.day-grid{
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(96px,1fr));
+  gap:9px; padding:0 20px;
+}
+.day-card{
+  background:var(--wood-panel); border:1px solid var(--wood-line);
+  border-radius:10px; padding:10px 8px; cursor:pointer; text-align:left;
+  transition:all 0.2s var(--ease); position:relative; min-height:78px;
+}
+.day-card .dnum{
+  font-family:'JetBrains Mono', monospace; font-size:10px; color:var(--ivory-faint);
+  text-transform:uppercase; letter-spacing:0.04em;
+}
+.day-card .dname{font-size:12px; font-weight:600; margin-top:3px; line-height:1.25;}
+.day-card:hover{border-color:var(--brass); transform:translateY(-2px);}
+
+.day-card.today{border-color:var(--brass); background:#40301e; box-shadow:0 0 0 2px rgba(193,154,91,0.25);}
+.day-card.today .dnum{color:var(--brass-bright);}
+
+.day-card.done{border-color:var(--felt-green); background:#2e4032;}
+.day-card.done .dname{color:var(--felt-green-bright);}
+.day-card.done::after{content:'✓'; position:absolute; top:8px; right:9px; color:var(--felt-green-bright); font-size:13px; font-weight:700;}
+
+.day-card.locked{cursor:default; opacity:0.42;}
+.day-card.locked:hover{transform:none; border-color:var(--wood-line);}
+.day-card.locked::after{content:'🔒'; position:absolute; top:8px; right:8px; font-size:11px;}
+
+/* ===== lecciones (práctica libre) ===== */
 
 .lesson-grid{
   display:grid; grid-template-columns:repeat(auto-fit, minmax(190px,1fr));
@@ -276,6 +316,11 @@ header{
 
 footer{text-align:center; margin-top:50px; padding:0 20px; font-size:12px; color:var(--ivory-faint);}
 
+@keyframes confetti-fall{
+  0%{transform:translateY(0) rotate(0deg); opacity:1;}
+  100%{transform:translateY(105vh) rotate(360deg); opacity:0.9;}
+}
+
 @media (max-width:600px){
   .hero h2{font-size:23px;}
   .tuner{padding:20px 12px 16px;}
@@ -295,7 +340,7 @@ footer{text-align:center; margin-top:50px; padding:0 20px; font-size:12px; color
   </div>
   <div class="streak-group">
     <div class="streak">🔥 Racha: <b id="streakCount">0</b> días</div>
-    <button class="btn-test-day" id="btnTestDay" title="Herramienta de prueba: simula que pasó un día">⏩ Avanzar día (prueba)</button>
+    <button class="btn-test-day" id="btnNextDay" title="Pasa al día siguiente del plan">▶ Día siguiente</button>
   </div>
 </header>
 
@@ -343,9 +388,18 @@ footer{text-align:center; margin-top:50px; padding:0 20px; font-size:12px; color
   </div>
 </section>
 
-<!-- ============ LECCIONES ============ -->
-<h3 class="section-title">Lecciones</h3>
-<p class="section-sub">Elegí una y tocá cada nota en tu piano cuando se resalte. El micrófono confirma cuándo pasar a la siguiente.</p>
+<!-- ============ PLAN DE 30 DÍAS ============ -->
+<h3 class="section-title">Plan de 30 días</h3>
+<p class="section-sub">Un ejercicio o canción nueva por día. Tocá "▶ Día siguiente" arriba cuando quieras avanzar — no depende de la fecha real. El día 31 es una sorpresa.</p>
+<div class="plan-progress-wrap">
+  <div class="plan-progress-bar"><div class="plan-progress-fill" id="planProgressFill" style="width:0%"></div></div>
+  <div class="plan-progress-txt" id="planProgressTxt">Día 1 de 30</div>
+</div>
+<div class="day-grid" id="dayGrid"></div>
+
+<!-- ============ PRÁCTICA LIBRE ============ -->
+<h3 class="section-title">Práctica libre</h3>
+<p class="section-sub">Todas las lecciones y canciones, sin esperar ningún día — elegí cualquiera cuando quieras.</p>
 <div class="lesson-grid" id="lessonGrid"></div>
 
 <div class="practice" id="practicePanel">
@@ -420,29 +474,179 @@ function noteToMidi(pc, octava){
 const LECCIONES = [
   {
     id:'escala',
+    categoria:'ejercicio',
     nombre:'Escala de Do mayor',
     meta:'8 notas · C4 a C5',
     notas:['C4','D4','E4','F4','G4','A4','B4','C5']
   },
   {
+    id:'arpegio',
+    categoria:'ejercicio',
+    nombre:'Arpegio de Do mayor',
+    meta:'acorde desglosado',
+    notas:['C4','E4','G4','C5','G4','E4','C4']
+  },
+  {
+    id:'sol_mayor',
+    categoria:'ejercicio',
+    nombre:'Escala de Sol mayor',
+    meta:'8 notas · G4 a G5',
+    notas:['G4','A4','B4','C5','D5','E5','F#5','G5']
+  },
+  {
+    id:'fa_mayor',
+    categoria:'ejercicio',
+    nombre:'Escala de Fa mayor',
+    meta:'8 notas · F4 a F5',
+    notas:['F4','G4','A4','A#4','C5','D5','E5','F5']
+  },
+  {
+    id:'la_menor',
+    categoria:'ejercicio',
+    nombre:'Escala de La menor',
+    meta:'8 notas · A4 a A5',
+    notas:['A4','B4','C5','D5','E5','F5','G5','A5']
+  },
+  {
+    id:'arpegio_sol',
+    categoria:'ejercicio',
+    nombre:'Arpegio de Sol mayor',
+    meta:'acorde desglosado',
+    notas:['G4','B4','D5','G5','D5','B4','G4']
+  },
+  {
+    id:'cromatica',
+    categoria:'ejercicio',
+    nombre:'Escala cromática',
+    meta:'las 12 notas · C4 a C5',
+    notas:['C4','C#4','D4','D#4','E4','F4','F#4','G4','G#4','A4','A#4','B4','C5']
+  },
+  {
+    id:'terceras',
+    categoria:'ejercicio',
+    nombre:'Terceras en Do mayor',
+    meta:'intervalos ascendentes',
+    notas:['C4','E4','D4','F4','E4','G4','F4','A4','G4','B4']
+  },
+  {
     id:'estrellita',
+    categoria:'cancion',
     nombre:'Estrellita (Twinkle Twinkle)',
     meta:'melodía tradicional',
     notas:['C4','C4','G4','G4','A4','A4','G4','F4','F4','E4','E4','D4','D4','C4']
   },
   {
     id:'himno',
+    categoria:'cancion',
     nombre:'Himno a la Alegría',
     meta:'Beethoven — fragmento inicial',
     notas:['E4','E4','F4','G4','G4','F4','E4','D4','C4','C4','D4','E4','E4','D4','D4']
   },
   {
     id:'elisa',
+    categoria:'cancion',
     nombre:'Para Elisa',
     meta:'Beethoven — motivo inicial',
     notas:['E5','D#5','E5','D#5','E5','B4','D5','C5','A4']
+  },
+  {
+    id:'martinillo',
+    categoria:'cancion',
+    nombre:'Martinillo',
+    meta:'melodía tradicional (Frère Jacques)',
+    notas:['C4','D4','E4','C4','C4','D4','E4','C4','E4','F4','G4','E4','F4','G4']
+  },
+  {
+    id:'cascabel',
+    categoria:'cancion',
+    nombre:'Cascabel',
+    meta:'melodía tradicional navideña',
+    notas:['E4','E4','E4','E4','E4','E4','E4','G4','C4','D4','E4']
+  },
+  {
+    id:'amazing_grace',
+    categoria:'cancion',
+    nombre:'Amazing Grace',
+    meta:'himno tradicional — fragmento inicial',
+    notas:['G4','C5','E5','C5','E5','D5','C5','A4','G4']
+  },
+  {
+    id:'noche_paz',
+    categoria:'cancion',
+    nombre:'Noche de Paz',
+    meta:'villancico tradicional — fragmento inicial',
+    notas:['G4','A4','G4','E4','G4','A4','G4','E4','G4','B4','A4','G4']
+  },
+  {
+    id:'corderito',
+    categoria:'cancion',
+    nombre:'Mary tenía un corderito',
+    meta:'melodía tradicional',
+    notas:['E4','D4','C4','D4','E4','E4','E4','D4','D4','D4','E4','G4','G4']
+  },
+  {
+    id:'puente_londres',
+    categoria:'cancion',
+    nombre:'El Puente de Londres',
+    meta:'melodía tradicional',
+    notas:['G4','A4','G4','F4','E4','F4','G4','D4','E4','F4','E4','F4','G4']
+  },
+  {
+    id:'greensleeves',
+    categoria:'cancion',
+    nombre:'Greensleeves',
+    meta:'balada tradicional inglesa — motivo inicial',
+    notas:['E4','G4','A4','B4','C5','B4','A4','F4','E4']
+  },
+  {
+    id:'cumpleanos',
+    categoria:'cancion',
+    nombre:'Cumpleaños Feliz',
+    meta:'melodía tradicional',
+    notas:['C4','C4','D4','C4','F4','E4','C4','C4','D4','C4','G4','F4']
+  },
+  {
+    id:'re_mayor',
+    categoria:'ejercicio',
+    nombre:'Escala de Re mayor',
+    meta:'8 notas · D4 a D5',
+    notas:['D4','E4','F#4','G4','A4','B4','C#5','D5']
+  },
+  {
+    id:'arpegio_fa',
+    categoria:'ejercicio',
+    nombre:'Arpegio de Fa mayor',
+    meta:'acorde desglosado',
+    notas:['F4','A4','C5','F5','C5','A4','F4']
+  },
+  {
+    id:'mi_menor',
+    categoria:'ejercicio',
+    nombre:'Escala de Mi menor',
+    meta:'8 notas · E4 a E5',
+    notas:['E4','F#4','G4','A4','B4','C5','D5','E5']
+  },
+  {
+    id:'sorpresa',
+    categoria:'sorpresa',
+    nombre:'🎉 Fanfarria sorpresa',
+    meta:'¡desbloqueada el día 31!',
+    notas:['C5','E5','G5','C6','G5','E5','C5','D5','E5','F5','G5']
   }
 ];
+
+/* ============================================================
+   PLAN DE 30 DÍAS — orden manual, día por día
+   ============================================================ */
+const PLAN_MES = [
+  'escala','arpegio','sol_mayor','estrellita','fa_mayor',
+  'arpegio_sol','martinillo','arpegio_fa','la_menor','cascabel',
+  're_mayor','amazing_grace','himno','elisa','terceras',
+  'cromatica','corderito','puente_londres','greensleeves','cumpleanos',
+  'noche_paz','mi_menor','estrellita','martinillo','himno',
+  'elisa','amazing_grace','cromatica','greensleeves','puente_londres'
+];
+const DIA_SORPRESA = PLAN_MES.length + 1; // día 31
 
 /* ============================================================
    ESTADO
@@ -458,6 +662,7 @@ const state = {
   holdFrames:0,
   requiredHold:18,        // ~0.3s a 60fps sosteniendo la nota correcta
   lastNoteHeard:null,
+  diaPlan:1,               // día actual del plan de 30 días (avance 100% manual)
 };
 
 const STORAGE_KEY = 'oido_piano_v1';
@@ -467,6 +672,7 @@ function cargarProgreso(){
     const raw = localStorage.getItem(STORAGE_KEY);
     const data = raw ? JSON.parse(raw) : {};
     state.lessonDone = data.lessonDone || {};
+    state.diaPlan = data.diaPlan || 1;
     actualizarRacha(data.lastVisit);
   }catch(e){ state.lessonDone = {}; }
 }
@@ -499,7 +705,7 @@ function guardarProgreso(extra){
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
     const data = raw ? JSON.parse(raw) : {};
-    Object.assign(data, {lessonDone: state.lessonDone}, extra||{});
+    Object.assign(data, {lessonDone: state.lessonDone, diaPlan: state.diaPlan}, extra||{});
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   }catch(e){}
 }
@@ -636,6 +842,85 @@ function actualizarAfinador(info){
   const clamped = Math.max(-50, Math.min(50, info.cents));
   const deg = clamped * 0.9; // -45deg a +45deg
   needle.style.transform = `rotate(${deg}deg)`;
+}
+
+/* ============================================================
+   PLAN DE 30 DÍAS: render y navegación manual
+   ============================================================ */
+function renderDayGrid(){
+  const grid = document.getElementById('dayGrid');
+  grid.innerHTML = '';
+
+  PLAN_MES.forEach((leccionId, i)=>{
+    const dia = i+1;
+    const leccion = LECCIONES.find(l=>l.id===leccionId);
+    const card = document.createElement('div');
+    const locked = dia > state.diaPlan;
+    const done = !!state.lessonDone[leccionId] && !locked;
+    card.className = 'day-card' + (locked?' locked':'') + (dia===state.diaPlan?' today':'') + (done?' done':'');
+    card.innerHTML = `<div class="dnum">Día ${dia}</div><div class="dname">${locked?'???':leccion.nombre}</div>`;
+    if(!locked) card.addEventListener('click', ()=> abrirDiaDelPlan(dia));
+    grid.appendChild(card);
+  });
+
+  // día 31 — sorpresa
+  const sorpresaCard = document.createElement('div');
+  const sorpresaLocked = state.diaPlan < DIA_SORPRESA;
+  sorpresaCard.className = 'day-card' + (sorpresaLocked?' locked':'') + (!sorpresaLocked?' today':'');
+  sorpresaCard.innerHTML = `<div class="dnum">Día ${DIA_SORPRESA}</div><div class="dname">${sorpresaLocked?'???':'🎁 Sorpresa'}</div>`;
+  if(!sorpresaLocked) sorpresaCard.addEventListener('click', ()=> abrirDiaDelPlan(DIA_SORPRESA));
+  grid.appendChild(sorpresaCard);
+
+  const pct = Math.min(100, Math.round((Math.min(state.diaPlan,DIA_SORPRESA)-1)/(DIA_SORPRESA-1)*100));
+  document.getElementById('planProgressFill').style.width = pct+'%';
+  document.getElementById('planProgressTxt').textContent =
+    state.diaPlan >= DIA_SORPRESA ? `¡Plan completo! · Día ${DIA_SORPRESA}` : `Día ${state.diaPlan} de ${PLAN_MES.length}`;
+}
+
+function abrirDiaDelPlan(dia){
+  if(dia === DIA_SORPRESA){ abrirLeccion('sorpresa'); mostrarConfeti(); return; }
+  const leccionId = PLAN_MES[dia-1];
+  abrirLeccion(leccionId);
+}
+
+function pasarDiaSiguiente(){
+  state.diaPlan = Math.min(state.diaPlan + 1, DIA_SORPRESA);
+  guardarProgreso();
+  renderDayGrid();
+
+  const btn = document.getElementById('btnNextDay');
+  btn.style.borderColor = 'var(--brass)';
+  setTimeout(()=>{ btn.style.borderColor=''; }, 400);
+
+  // también hace avanzar la racha, como pedía originalmente
+  avanzarRachaManual();
+}
+function avanzarRachaManual(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const data = raw ? JSON.parse(raw) : {};
+    const hoy = new Date().toISOString().slice(0,10);
+    const base = data.lastVisit ? new Date(data.lastVisit+'T00:00:00') : new Date(hoy+'T00:00:00');
+    base.setDate(base.getDate()-1);
+    data.lastVisit = base.toISOString().slice(0,10);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }catch(e){}
+  actualizarRacha();
+}
+
+function mostrarConfeti(){
+  const emojis = ['🎉','🎊','🎹','✨','🥳'];
+  for(let i=0;i<28;i++){
+    const bit = document.createElement('div');
+    bit.textContent = emojis[Math.floor(Math.random()*emojis.length)];
+    bit.style.cssText = `
+      position:fixed; top:-30px; left:${Math.random()*100}vw; font-size:${18+Math.random()*16}px;
+      z-index:999; pointer-events:none;
+      animation:confetti-fall ${2.2+Math.random()*1.6}s linear forwards;
+    `;
+    document.body.appendChild(bit);
+    setTimeout(()=>bit.remove(), 4200);
+  }
 }
 
 /* ============================================================
@@ -784,6 +1069,7 @@ function completarLeccion(){
   renderNoteTrack();
   document.getElementById('doneBanner').classList.add('show');
   renderLecciones();
+  renderDayGrid();
   document.querySelectorAll('.lesson-card').forEach(c=>{
     if(c.querySelector('.lname').textContent===state.currentLesson.nombre) c.classList.add('active');
   });
@@ -817,32 +1103,11 @@ document.getElementById('sensSelect').addEventListener('change', e=>{
   state.sensitivity = parseFloat(e.target.value);
 });
 
-/* ============================================================
-   HERRAMIENTA DE PRUEBA: simular que pasó un día
-   Retrocede la fecha guardada para que, al recalcular la racha,
-   la app la trate como si hubiese pasado un día real.
-   No afecta las lecciones (siempre están disponibles), solo
-   permite ver crecer la racha sin esperar.
-   ============================================================ */
-function avanzarDiaPrueba(){
-  try{
-    const raw = localStorage.getItem(STORAGE_KEY);
-    const data = raw ? JSON.parse(raw) : {};
-    const hoy = new Date().toISOString().slice(0,10);
-    const base = data.lastVisit ? new Date(data.lastVisit+'T00:00:00') : new Date(hoy+'T00:00:00');
-    base.setDate(base.getDate()-1);
-    data.lastVisit = base.toISOString().slice(0,10);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  }catch(e){}
-  actualizarRacha();
-  const chip = document.querySelector('.streak');
-  chip.style.borderColor = 'var(--brass)';
-  setTimeout(()=>{ chip.style.borderColor=''; }, 400);
-}
-document.getElementById('btnTestDay').addEventListener('click', avanzarDiaPrueba);
+document.getElementById('btnNextDay').addEventListener('click', pasarDiaSiguiente);
 
 cargarProgreso();
 renderLecciones();
+renderDayGrid();
 </script>
 </body>
 </html>
