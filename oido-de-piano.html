@@ -75,12 +75,19 @@ header{
   font-family:'Fraunces', serif; font-weight:600; font-size:22px; letter-spacing:0.01em;
 }
 .brand .sub{font-size:12px; color:var(--ivory-faint); margin-top:1px;}
+.streak-group{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
 .streak{
   display:flex; align-items:center; gap:8px;
   background:var(--wood-panel-2); border:1px solid var(--wood-line);
   padding:7px 14px; border-radius:30px; font-size:13px; color:var(--ivory-dim);
 }
 .streak b{color:var(--brass-bright); font-family:'JetBrains Mono', monospace;}
+.btn-test-day{
+  background:transparent; border:1px dashed var(--wood-line); color:var(--ivory-faint);
+  padding:6px 12px; border-radius:30px; font-size:11px; cursor:pointer; transition:all 0.15s;
+}
+.btn-test-day:hover{border-color:var(--brass); color:var(--brass-bright);}
+.btn-test-day:active{transform:scale(0.97);}
 
 /* ============================================================
    HERO — afinador en vivo (elemento firma: aguja de latón sobre
@@ -286,7 +293,10 @@ footer{text-align:center; margin-top:50px; padding:0 20px; font-size:12px; color
       <div class="sub">Práctica guiada con micrófono</div>
     </div>
   </div>
-  <div class="streak">🔥 Racha: <b id="streakCount">0</b> días</div>
+  <div class="streak-group">
+    <div class="streak">🔥 Racha: <b id="streakCount">0</b> días</div>
+    <button class="btn-test-day" id="btnTestDay" title="Herramienta de prueba: simula que pasó un día">⏩ Avanzar día (prueba)</button>
+  </div>
 </header>
 
 <!-- ============ HERO: AFINADOR EN VIVO ============ -->
@@ -806,6 +816,30 @@ document.getElementById('a4Input').addEventListener('change', e=>{
 document.getElementById('sensSelect').addEventListener('change', e=>{
   state.sensitivity = parseFloat(e.target.value);
 });
+
+/* ============================================================
+   HERRAMIENTA DE PRUEBA: simular que pasó un día
+   Retrocede la fecha guardada para que, al recalcular la racha,
+   la app la trate como si hubiese pasado un día real.
+   No afecta las lecciones (siempre están disponibles), solo
+   permite ver crecer la racha sin esperar.
+   ============================================================ */
+function avanzarDiaPrueba(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const data = raw ? JSON.parse(raw) : {};
+    const hoy = new Date().toISOString().slice(0,10);
+    const base = data.lastVisit ? new Date(data.lastVisit+'T00:00:00') : new Date(hoy+'T00:00:00');
+    base.setDate(base.getDate()-1);
+    data.lastVisit = base.toISOString().slice(0,10);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }catch(e){}
+  actualizarRacha();
+  const chip = document.querySelector('.streak');
+  chip.style.borderColor = 'var(--brass)';
+  setTimeout(()=>{ chip.style.borderColor=''; }, 400);
+}
+document.getElementById('btnTestDay').addEventListener('click', avanzarDiaPrueba);
 
 cargarProgreso();
 renderLecciones();
